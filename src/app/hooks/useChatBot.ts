@@ -1,61 +1,71 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  SpeechRecognition,
-  SpeechRecognitionEvent,
-  SpeechRecognitionErrorEvent,
-} from "@/constants/speechRecognitionTypes";
+import { useCallback, useRef, useState } from "react";
 
 export const useChatBot = () => {
   const [isListening, setListening] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const [audio, setAudio] = useState<Blob | null>(null);
+  const [isProcessing, setProcessing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
-  const startListening = useCallback(() => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+  const startListening = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: "audio/webm",
+      });
 
-    if (SpeechRecognition) {
-      if (!recognitionRef.current) {
-        recognitionRef.current = new SpeechRecognition();
-        const recognition = recognitionRef.current;
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
-        recognition.continuous = true;
-        recognition.interimResults = true;
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
 
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
-          const current = event.resultIndex;
-          const transcript = event.results[current][0].transcript;
-        };
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/mp3",
+        });
+        setAudio(audioBlob);
+      };
 
-        recognition.onend = () => {
-          console.log("Speech recognition ended.");
-          setListening(false);
-        };
-
-        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-          console.error("Speech recognition error", event.error);
-          setListening(false);
-        };
-      }
-
-      recognitionRef.current.start();
+      mediaRecorder.start();
       setListening(true);
-    } else {
-      console.error("Speech recognition not supported in this browser.");
+      console.log("Recording started...");
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
     }
-  }, []);
+  };
 
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      setListening(false);
+  const stopListening = async () => {
+    setListening(false);
+
+    setProcessing(true);
+
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+
+      console.log("Recording stopped.");
     }
-  }, []);
+
+    await new Promise((resolve) =>
+      setTimeout(() => {
+        setProcessing(false);
+        resolve("okay");
+      }, 2000)
+    );
+  };
 
   return {
     isListening,
     startListening,
     stopListening,
+    isProcessing,
   };
 };
