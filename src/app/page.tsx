@@ -6,10 +6,15 @@ import { ThreeDots } from "@/components/common/ThreeDots";
 import { Spinner } from "@/components/common/Spinner";
 
 export default function Home() {
-  const { isListening, stopListening, startListening, isProcessing } =
+  const { isListening, stopListening, startListening, isProcessing, audio } =
     useChatBot();
+
   return (
     <div className="">
+      {audio && (
+        <audio controls src={URL.createObjectURL(audio)} className="w-full" />
+      )}
+
       <section className="fixed bottom-8 left-1/2 transform -translate-x-1/2">
         {isProcessing ? (
           <Spinner />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 export const useChatBot = () => {
   const [isListening, setListening] = useState(false);
@@ -67,5 +67,6 @@ export const useChatBot = () => {
     startListening,
     stopListening,
     isProcessing,
+    audio,
   };
 };
